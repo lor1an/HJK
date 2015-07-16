@@ -1,5 +1,6 @@
 package com.test;
 
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.atmosphere.cpr.AtmosphereHandler;
 import org.atmosphere.cpr.AtmosphereResource;
 import org.atmosphere.cpr.AtmosphereResourceEvent;
@@ -22,20 +23,20 @@ import java.util.List;
 public class LogHandler implements AtmosphereHandler<HttpServletRequest, HttpServletResponse>, TailHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogHandler.class);
-    private final static String FILE_TO_WATCH = "D:\\tailLog\\";
+    private String directory = "D:\\hybrisSuite\\hybris\\log\\tomcat\\";
     private static SrceTailer tailer;
-    private final static Integer MAX_CHUNK_LENTH = 8000;
+    private final static Integer MAX_CHUNK_LENTH = 1500;
+    private static final long DELAY = 100;
     private Broadcaster BROADCASTER;
-
     private static List<String> watchableLogs = new ArrayList<String>();
 
     public LogHandler() {
-        final File logsDir = new File(FILE_TO_WATCH);
+        final File logsDir = new File(directory);
         if (logsDir.exists() && logsDir.isDirectory()) {
             File[] logs = logsDir.listFiles();
-            for (File f : logs) {
-                if (f.getName().endsWith(".log")) {
-                    watchableLogs.add(f.getName());
+            for (File file : logs) {
+                if (file.getName().endsWith(".log")) {
+                    watchableLogs.add(file.getName());
                 }
             }
         } else {
@@ -44,12 +45,12 @@ public class LogHandler implements AtmosphereHandler<HttpServletRequest, HttpSer
     }
 
     public void reInit() {
-        final File logsDir = new File(FILE_TO_WATCH);
+        final File logsDir = new File(directory);
         if (logsDir.exists() && logsDir.isDirectory()) {
             File[] logs = logsDir.listFiles();
-            for (File f : logs) {
-                if (f.getName().endsWith(".log")) {
-                    watchableLogs.add(f.getName());
+            for (File file : logs) {
+                if (file.getName().endsWith(".log")) {
+                    watchableLogs.add(file.getName());
                 }
             }
         } else {
@@ -82,7 +83,7 @@ public class LogHandler implements AtmosphereHandler<HttpServletRequest, HttpSer
         } else { // POST
             final String postPayload = req.getReader().readLine();
             if (postPayload != null && postPayload.startsWith("log=")) {
-                tailer = SrceTailer.createTailer(FILE_TO_WATCH + postPayload.split("=")[1], FILE_TO_WATCH, this);
+                tailer = SrceTailer.createTailer(directory + postPayload.split("=")[1], directory, this);
             }
             BROADCASTER.broadcast(asJson("filename", postPayload.split("=")[1]));
             res.getWriter().flush();
@@ -108,19 +109,27 @@ public class LogHandler implements AtmosphereHandler<HttpServletRequest, HttpSer
     }
 
     @Override
-    public void handle(String line) {
-        LOG.info("line's length " + line.length());
-        if (line.length() > MAX_CHUNK_LENTH) {
-            for (final String token : Splitter.fixedLength(MAX_CHUNK_LENTH).split(line)) {
-                BROADCASTER.broadcast(asJson("tail", token));
+    public synchronized void handle(String line) {
+        int lineLen = line.length();
+        LOG.info("line's length " + lineLen);
+        if (lineLen > 0) {
+            if (lineLen > MAX_CHUNK_LENTH) {
+                for (final String token : Splitter.fixedLength(MAX_CHUNK_LENTH).split(line)) {
+                    BROADCASTER.broadcast(asJson("tail", token));
+                    try {
+                        Thread.sleep(DELAY);
+                    } catch (InterruptedException e) {
+                        LOG.error("Exception during splitting line", e);
+                    }
+                }
+            } else {
+                BROADCASTER.broadcast(asJson("tail", StringEscapeUtils.escapeJson(line)));
             }
-        } else {
-            BROADCASTER.broadcast(asJson("tail", line));
         }
     }
 
     protected String asJson(final String key, final String value) {
-        return "{\"" + key + "\":\"" + value + "\"}";
+        return "{\"" + key + "\":\"" + StringEscapeUtils.escapeJson(value) + "\"}";
     }
 
     protected String asJsonArray(final String key, final List<String> list) {

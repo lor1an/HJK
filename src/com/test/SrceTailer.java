@@ -87,7 +87,7 @@ public class SrceTailer implements Runnable {
     }
 
     public void sendToHandler(String line) {
-        handler.handle(StringEscapeUtils.escapeJson(line));
+        handler.handle(line);
     }
 
     public void stop() {

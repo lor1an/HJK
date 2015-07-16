@@ -1,0 +1,48 @@
+body {
+	
+}
+
+#selector {
+	float: left;
+}
+
+#info {
+	font-size: 32px;
+	color: #000;
+	text-align: right;
+	margin: 20px 10px;
+	text-transform: lowercase;
+}
+
+#tail {
+	clear: both;
+	border: 1px solid #444;
+	overflow-x: hidden;
+	overflow-y: auto;
+	height: 600px;
+	padding: 10px;
+	font-size: 12px;
+	line-height: 20px;
+}
+
+.trebuchet {
+	font-family: "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande",
+		"Lucida Sans", Arial, sans-serif;
+}
+
+.monospace {
+	font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console",
+		Terminal, monospace;
+}
+
+.selection::selection, .selection *::selection {
+	background: #333;
+	color: #EEE;
+	border-color: #000;
+}
+
+.selection::-moz-selection, .selection *::-moz-selection {
+	background: #333;
+	color: #EEE;
+	border-color: #000;
+}
