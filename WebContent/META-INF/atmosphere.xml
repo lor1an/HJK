@@ -1,5 +1,0 @@
-<atmosphere-handlers>
-    <atmosphere-handler context-root="/logviewer" class-name="com.test.LogHandler">
-        <!--<property name="name" value="FlickrHandler"/>-->
-    </atmosphere-handler>
-</atmosphere-handlers>
