@@ -1,4 +1,4 @@
-package com.test;
+package com.hjk.tail;
 
 public interface TailHandler {
 	

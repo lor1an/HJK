@@ -1,4 +1,4 @@
-package com.test;
+package com.hjk.controller;
 
 import org.atmosphere.cpr.AtmosphereResource;
 import org.atmosphere.cpr.Meteor;

@@ -1,4 +1,4 @@
-package com.test;
+package com.hjk.tail.impl;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -14,7 +14,10 @@ import java.nio.file.WatchService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SrceTailer implements Runnable {
+import com.hjk.tail.TailHandler;
+import com.hjk.tail.Tailer;
+
+public class SrceTailer implements Tailer, Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(SrceTailer.class);
     private static SrceTailer tailer;
@@ -74,7 +77,8 @@ public class SrceTailer implements Runnable {
         }
 
     }
-
+    
+    @Override
     public void refreshTail() throws IOException {
         file.seek(length);
         for (long i = 0; i < file.length() - length; i++) {
