@@ -12,8 +12,6 @@ public interface TailService {
 
     void initTail(AtmosphereResource event) throws IOException;
     
-    void destroy();
-    
     Tailer getTailer();
 
 }

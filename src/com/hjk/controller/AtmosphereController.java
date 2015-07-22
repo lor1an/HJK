@@ -21,22 +21,19 @@ public class AtmosphereController  {
     
 	@RequestMapping(value = "/", method = RequestMethod.GET)
 	public ModelAndView getView() {
-	    if(tailService.getTailer() != null){
-	        tailService.destroy();
-	    }
 		return new ModelAndView("index");
 	}
 
 	@RequestMapping(value = "/logviewer", method = RequestMethod.GET)
 	@ResponseBody
-	public void onRequest(AtmosphereResource event, HttpSession session)
+	public void onRequest(final AtmosphereResource event, final HttpSession session)
 			throws IOException {
 	    tailService.getLogEntries(event);
 	}
 
 	@RequestMapping(value = "/logviewer", method = RequestMethod.POST)
 	@ResponseBody
-	public void onPost(AtmosphereResource event) throws IOException {
+	public void onPost(final AtmosphereResource event) throws IOException {
 	    tailService.initTail(event);
 	}
 }

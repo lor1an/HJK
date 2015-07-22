@@ -10,17 +10,16 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 import javax.servlet.http.HttpServletRequest;
 
-/**
- * Created by grega on 28/1/14.
- */
-public class AtmosphereResolver implements HandlerMethodArgumentResolver{
+public class AtmosphereResolver implements HandlerMethodArgumentResolver {
     @Override
-    public boolean supportsParameter(MethodParameter methodParameter) {
+    public boolean supportsParameter(final MethodParameter methodParameter) {
         return AtmosphereResource.class.isAssignableFrom(methodParameter.getParameterType());
     }
 
     @Override
-    public Object resolveArgument(MethodParameter methodParameter, ModelAndViewContainer modelAndViewContainer, NativeWebRequest nativeWebRequest, WebDataBinderFactory webDataBinderFactory) throws Exception {
+    public Object resolveArgument(final MethodParameter methodParameter,
+            final ModelAndViewContainer modelAndViewContainer, final NativeWebRequest nativeWebRequest,
+            final WebDataBinderFactory webDataBinderFactory) throws Exception {
         Meteor m = Meteor.build(nativeWebRequest.getNativeRequest(HttpServletRequest.class));
         return m.getAtmosphereResource();
     }

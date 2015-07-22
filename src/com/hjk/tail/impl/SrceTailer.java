@@ -26,9 +26,9 @@ public class SrceTailer implements Tailer, Runnable {
     private long length;
     private Path folder;
     private TailHandler handler;
-    private volatile boolean run = true;
+    
 
-    public SrceTailer(RandomAccessFile file, long length, Path folder, TailHandler handler) {
+    public SrceTailer(final RandomAccessFile file,final long length, final Path folder, final TailHandler handler) {
         this.file = file;
         this.length = length;
         this.folder = folder;
@@ -36,7 +36,7 @@ public class SrceTailer implements Tailer, Runnable {
         this.tail = new StringBuilder();
     }
 
-    public synchronized static SrceTailer createTailer(String path, String folderPath, TailHandler handler)
+    public synchronized static SrceTailer createTailer(final String path, final String folderPath, final TailHandler handler)
             throws IOException {
         if (tailer == null) {
             RandomAccessFile file = new RandomAccessFile(path, "r");
@@ -45,6 +45,14 @@ public class SrceTailer implements Tailer, Runnable {
             Thread thread = new Thread(tailer);
             thread.setDaemon(true);
             thread.start();
+        }else{
+            RandomAccessFile file = new RandomAccessFile(path, "r");
+            Path folder = Paths.get(folderPath);
+            tailer.file = file;
+            tailer.length = file.length();
+            tailer.folder = folder;
+            tailer.handler = handler;
+            tailer.tail = new StringBuilder();
         }
         return tailer;
     }
@@ -58,7 +66,7 @@ public class SrceTailer implements Tailer, Runnable {
             folder.register(service, StandardWatchEventKinds.ENTRY_MODIFY);
 
             WatchKey key = null;
-            while (run) {
+            while (handler.isRun()) {
                 key = service.take();
 
                 Kind<?> kind = null;
@@ -93,9 +101,37 @@ public class SrceTailer implements Tailer, Runnable {
         handler.handle(line);
     }
 
-    public void stop() {
-        LOG.info("Stopping tailer...");
-        this.run = false;
+    public StringBuilder getTail() {
+        return tail;
     }
 
+    public void setTail(StringBuilder tail) {
+        this.tail = tail;
+    }
+
+    public RandomAccessFile getFile() {
+        return file;
+    }
+
+    public void setFile(RandomAccessFile file) {
+        this.file = file;
+    }
+
+    public long getLength() {
+        return length;
+    }
+
+    public void setLength(long length) {
+        this.length = length;
+    }
+
+    public Path getFolder() {
+        return folder;
+    }
+
+    public void setFolder(Path folder) {
+        this.folder = folder;
+    }
+    
+    
 }

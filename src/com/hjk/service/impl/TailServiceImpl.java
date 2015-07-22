@@ -33,14 +33,13 @@ public class TailServiceImpl implements TailService, TailHandler {
     private final static Integer MAX_CHUNK_LENTH = 1500;
     private static final long DELAY = 100;
     private Broadcaster BROADCASTER;
+    private volatile boolean run = true;
     private static List<String> watchableLogs = new ArrayList<String>();
 
     @Override
-    public void getLogEntries(AtmosphereResource event) throws IOException {
-        if (watchableLogs.size() == 0) {
-            reInit();
-        }
-
+    public void getLogEntries(final AtmosphereResource event) throws IOException {
+        reInit();
+        stopTail();
         HttpServletResponse res = event.getResponse();
         res.setContentType("text/html");
         res.addHeader("Cache-Control", "private");
@@ -57,22 +56,19 @@ public class TailServiceImpl implements TailService, TailHandler {
     }
 
     @Override
-    public void initTail(AtmosphereResource event) throws IOException {
+    public void initTail(final AtmosphereResource event) throws IOException {
         HttpServletRequest req = event.getRequest();
         HttpServletResponse res = event.getResponse();
         final String postPayload = req.getReader().readLine();
         if (postPayload != null && postPayload.startsWith("log=")) {
+            stopTail();
             tailer = SrceTailer.createTailer(directory + postPayload.split("=")[1], directory, this);
+            startTail();
         }
         BROADCASTER.broadcast(asJson("filename", postPayload.split("=")[1]));
         res.getWriter().flush();
     }
     
-    @Override
-    public void destroy() {
-        tailer.stop();
-    }
-
     public void reInit() {
         final File logsDir = new File(directory);
         if (logsDir.exists() && logsDir.isDirectory()) {
@@ -83,11 +79,12 @@ public class TailServiceImpl implements TailService, TailHandler {
                 }
             }
         } else {
+            LOG.info("Not a directory");
         }
     }
 
     @Override
-    public void handle(String line) {
+    public void handle(final String line) {
         int lineLen = line.length();
         LOG.info("line's length " + lineLen);
         if (lineLen > 0) {
@@ -117,4 +114,20 @@ public class TailServiceImpl implements TailService, TailHandler {
     public SrceTailer getTailer(){
         return tailer;
     }
+
+    @Override
+    public boolean isRun() {
+        return this.run;
+    }
+    
+    private void startTail(){
+        LOG.info("Starting tailer...");
+        this.run = true;        
+    }
+
+    private void stopTail() {
+        LOG.info("Stopping tailer...");
+        this.run = false;        
+    }
+    
 }

@@ -51,8 +51,7 @@ $(document).ready(
                     });
                   } else if (data.tail) {
                     if (pause) {
-                      pause_buffer.concat(data.tail);
-                      pause_buffer.concat('<br/>');
+                      pause_buffer += data.tail;
                     } else {
                       addCR(data.tail, buffer);
                       buffer.scrollTop(lines * 100)
@@ -77,32 +76,27 @@ $(document).ready(
           function addCR(str, buffer) {
             if (str.substr(str.length - 2) != '\n' && str.length > 5) {
               str = str.replace(/(?:\r\n|\r|\n)/g, '<br />');
-              buffer.append(str.concat('<br/>'));
+              str = str.replace(/(?:\\r\\n|\\r|\\n)/g, '<br />');
+              buffer.append(str);
             }
           }
           function connect() {
             subscribe();
           }
 
-          $('.q').click(function() {
+          $('.start_stop').click(function() {
             var $this = $(this);
-            $this.toggleClass('start_stop');
-            if ($this.hasClass('start_stop')) {
-              
-              
+            $this.toggleClass('flag');
+            if ($this.hasClass('flag')) {
               addCR(pause_buffer, buffer);
               buffer.scrollTop(lines * 100)
-              lines = lines + pause_buffer  .length;
-              pause = true;
-              pause_buffer = '';
-              $this.text('Continue');
-              
-
-            } else {
+              lines = lines + pause_buffer.length;
               pause = false;
+              pause_buffer = '';
               $this.text('Pause');
-             
-              
+            } else {
+              pause = true;
+              $this.text('Resume');
             }
           });
 

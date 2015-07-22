@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Websockets tail Server</title>
+<title>Tail</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <script src="resources/javascripts/jquery-1.4.3.js"></script>
 <script src="resources/javascripts/jquery.form.js"></script>
@@ -21,7 +21,7 @@
 	<div id="info" class="trebuchet"></div>
 	<div id="tail" class="monospace selection"></div>
 	<input id="refresh" value="Refresh" type="button">
-	<button class="q start_stop">Pause</button>
+	<button class="start_stop flag">Pause</button>
 
 </body>
 </html>
