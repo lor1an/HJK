@@ -8,12 +8,18 @@
 
 	<properties>
 		<spring.version>3.2.0.RELEASE</spring.version>
-		<atmosphere.version>2.0.7</atmosphere.version>
+		<atmosphere.version>2.2.8</atmosphere.version>
 		<atmosphere.jquery.version>1.0.18</atmosphere.jquery.version>
+		<jackson.version>1.9.10</jackson.version>
 		<spring.security.version>3.2.3.RELEASE</spring.security.version>
 	</properties>
 
 	<dependencies>
+		<dependency>
+			<groupId>org.atmosphere</groupId>
+			<artifactId>atmosphere-spring</artifactId>
+			<version>2.0.0</version>
+		</dependency>
 		<!-- Spring -->
 		<dependency>
 			<groupId>org.springframework</groupId>
@@ -114,7 +120,13 @@
 			<artifactId>spring-webmvc</artifactId>
 			<version>${spring.version}</version>
 		</dependency>
-		
+
+		<dependency>
+			<groupId>org.codehaus.jackson</groupId>
+			<artifactId>jackson-mapper-asl</artifactId>
+			<version>${jackson.version}</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

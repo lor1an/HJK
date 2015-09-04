@@ -3,7 +3,9 @@ package com.hjk.service.impl;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -11,6 +13,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.atmosphere.cpr.AtmosphereResource;
 import org.atmosphere.cpr.Broadcaster;
+import org.atmosphere.cpr.BroadcasterFactory;
+import org.atmosphere.cpr.MetaBroadcaster;
 import org.json.simple.JSONValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,50 +30,51 @@ import com.hjk.tail.impl.SrceTailer;
 public class TailServiceImpl implements TailService, TailHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(TailServiceImpl.class);
-    
-    @Value("#{environment.HYBRIS_HOME}\\log\\tomcat\\")
+
+    //@Value("#{environment.HYBRIS_HOME}\\log\\tomcat\\")
     private String directory;
-    private static SrceTailer tailer;
-    private final static Integer MAX_CHUNK_LENTH = 1500;
+    private static final  Integer MAX_CHUNK_LENTH = 1500;
     private static final long DELAY = 100;
-    private Broadcaster BROADCASTER;
-    private volatile boolean run = true;
     private static List<String> watchableLogs = new ArrayList<String>();
+    private static volatile Map<String, SrceTailer> uidTailer = new HashMap<String, SrceTailer>();
 
     @Override
-    public void getLogEntries(final AtmosphereResource event) throws IOException {
+    public void getLogEntries(AtmosphereResource resource, String uid) throws IOException {
+        directory = System.getProperty("catalina.base").replace("bin\\platform\\tomcat", "log\\tomcat\\");
         reInit();
-        stopTail();
-        HttpServletResponse res = event.getResponse();
+        if(uidTailer.get(uid) != null){
+            uidTailer.get(uid).stopTail();
+        }
+        HttpServletResponse res = resource.getResponse();
         res.setContentType("text/html");
         res.addHeader("Cache-Control", "private");
         res.addHeader("Pragma", "no-cache");
-
-        event.suspend();
-        if (BROADCASTER == null)
-            BROADCASTER = event.getBroadcaster();
-
-        if (watchableLogs.size() != 0) {
-            BROADCASTER.broadcast(asJsonArray("logs", watchableLogs));
-        }
-        res.getWriter().flush();
+        resource.suspend();
+        BroadcasterFactory broadcasterFactory = resource.getAtmosphereConfig().getBroadcasterFactory();
+        Broadcaster broadcaster = broadcasterFactory.lookup(uid, true);
+        broadcaster.addAtmosphereResource(resource);
+        getMetaBroadcaster(resource).broadcastTo(uid, asJsonArray("logs", watchableLogs));
     }
 
     @Override
-    public void initTail(final AtmosphereResource event) throws IOException {
-        HttpServletRequest req = event.getRequest();
-        HttpServletResponse res = event.getResponse();
+    public void initTail(final AtmosphereResource resource, String uid) throws IOException {
+        HttpServletRequest req = resource.getRequest();
         final String postPayload = req.getReader().readLine();
         if (postPayload != null && postPayload.startsWith("log=")) {
-            stopTail();
-            tailer = SrceTailer.createTailer(directory + postPayload.split("=")[1], directory, this);
-            startTail();
+            SrceTailer tailer = uidTailer.get(uid);
+            if(tailer != null){
+                tailer.stopTail();
+            }
+            tailer = SrceTailer.createTailer(directory + postPayload.split("=")[1], directory, this, uid, resource);
+            tailer.startTailerThread();
+            uidTailer.put(uid, tailer);
+            tailer.startTail();
         }
-        BROADCASTER.broadcast(asJson("filename", postPayload.split("=")[1]));
-        res.getWriter().flush();
+        getMetaBroadcaster(resource).broadcastTo(uid, asJson("filename", postPayload.split("=")[1]));
     }
-    
+
     public void reInit() {
+        watchableLogs.clear();
         final File logsDir = new File(directory);
         if (logsDir.exists() && logsDir.isDirectory()) {
             File[] logs = logsDir.listFiles();
@@ -84,13 +89,13 @@ public class TailServiceImpl implements TailService, TailHandler {
     }
 
     @Override
-    public void handle(final String line) {
+    public void handle(final String line, String uid, final AtmosphereResource resource) throws IOException {
         int lineLen = line.length();
         LOG.info("line's length " + lineLen);
         if (lineLen > 0) {
             if (lineLen > MAX_CHUNK_LENTH) {
                 for (final String token : Splitter.fixedLength(MAX_CHUNK_LENTH).split(line)) {
-                    BROADCASTER.broadcast(asJson("tail", token));
+                    getMetaBroadcaster(resource).broadcastTo(uid, asJson("tail", token));
                     try {
                         Thread.sleep(DELAY);
                     } catch (InterruptedException e) {
@@ -98,7 +103,7 @@ public class TailServiceImpl implements TailService, TailHandler {
                     }
                 }
             } else {
-                BROADCASTER.broadcast(asJson("tail", StringEscapeUtils.escapeJson(line)));
+                getMetaBroadcaster(resource).broadcastTo(uid, asJson("tail", StringEscapeUtils.escapeJson(line)));
             }
         }
     }
@@ -110,24 +115,16 @@ public class TailServiceImpl implements TailService, TailHandler {
     protected String asJsonArray(final String key, final List<String> list) {
         return ("{\"" + key + "\":" + JSONValue.toJSONString(list) + "}");
     }
-    
-    public SrceTailer getTailer(){
-        return tailer;
+
+    private MetaBroadcaster getMetaBroadcaster(AtmosphereResource resource) {
+        return resource.getAtmosphereConfig().metaBroadcaster();
     }
 
     @Override
-    public boolean isRun() {
-        return this.run;
+    public void closeTailForUrl(AtmosphereResource resource, String uid) {
+        if(uidTailer.get(uid) != null){
+            uidTailer.get(uid).stopTail();
+            uidTailer.put(uid, null);
+        }
     }
-    
-    private void startTail(){
-        LOG.info("Starting tailer...");
-        this.run = true;        
-    }
-
-    private void stopTail() {
-        LOG.info("Stopping tailer...");
-        this.run = false;        
-    }
-    
 }

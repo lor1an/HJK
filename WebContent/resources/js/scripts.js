@@ -8,9 +8,7 @@ $(document).ready(
           var pause_buffer = '';
 
           function subscribe() {
-            // jquery.atmosphere.response
             function callback(response) {
-              // Websocket events.
               $.atmosphere.log('info', ["response.state: " + response.state]);
               $.atmosphere.log('info', ["response.transport: "
                       + response.transport]);
@@ -22,9 +20,6 @@ $(document).ready(
                 $.atmosphere.log('info', ["response.responseBody: "
                         + response.responseBody]);
                 if (response.status == 200) {
-                  if (response.responseBody.slice(-1) != '}') {
-                    response.responseBody = response.responseBody.slice(0, -1);
-                  }
                   var data = jQuery.parseJSON(response.responseBody);
                   if (data.filename) {
                     notice.html('watching ' + data.filename);
@@ -43,7 +38,6 @@ $(document).ready(
                         $("#info,#tail").empty();
                         return;
                       }
-                      // socket.send({log:log.options[log.selectedIndex].value});
                       connectedEndpoint.push(document.location.toString()
                               + 'logviewer', null, $.atmosphere.request = {
                         data: 'log=' + log.options[log.selectedIndex].value
@@ -64,10 +58,11 @@ $(document).ready(
             }
 
             var location = document.location.toString() + '/logviewer';
-
+            var id = location.match(/\d{6}/);
+            location = location.replace(id, "/" + id);
             $.atmosphere.subscribe(location, !callbackAdded ? callback : null,
                     $.atmosphere.request = {
-                      transport: 'websocket'
+                      transport: "websocket",
                     });
             connectedEndpoint = $.atmosphere.response;
             callbackAdded = true;
@@ -108,3 +103,11 @@ $(function() {
     $("#tail").empty();
   });
 })
+
+$(window).unload( function () { 
+  var location = document.location.toString() + '/close';
+  var id = location.match(/\d{6}/);
+  location = location.replace(id, "/" + id);
+  jQuery.ajax({url:location, async:false})
+} );
+

@@ -4,14 +4,11 @@ import java.io.IOException;
 
 import org.atmosphere.cpr.AtmosphereResource;
 
-import com.hjk.tail.Tailer;
-
 public interface TailService {
 
-    void getLogEntries(AtmosphereResource event) throws IOException;
+    public void getLogEntries(AtmosphereResource resource, String uid) throws IOException;
 
-    void initTail(AtmosphereResource event) throws IOException;
-    
-    Tailer getTailer();
+    void initTail(AtmosphereResource resource, String uid) throws IOException;
 
+    void closeTailForUrl(AtmosphereResource resource, String uid);
 }

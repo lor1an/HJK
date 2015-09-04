@@ -11,6 +11,7 @@ import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 
+import org.atmosphere.cpr.AtmosphereResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,41 +21,40 @@ import com.hjk.tail.Tailer;
 public class SrceTailer implements Tailer, Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(SrceTailer.class);
-    private static SrceTailer tailer;
     private StringBuilder tail;
     private RandomAccessFile file;
     private long length;
     private Path folder;
     private TailHandler handler;
-    
+    private String uid;
+    private AtmosphereResource resource;
+    private volatile boolean run = true;
 
-    public SrceTailer(final RandomAccessFile file,final long length, final Path folder, final TailHandler handler) {
+    public SrceTailer() {
+    }
+
+    public SrceTailer(final RandomAccessFile file, final long length, final Path folder, final TailHandler handler,
+            String uid, AtmosphereResource resource) {
         this.file = file;
         this.length = length;
         this.folder = folder;
         this.handler = handler;
         this.tail = new StringBuilder();
+        this.uid = uid;
+        this.resource = resource;
     }
 
-    public synchronized static SrceTailer createTailer(final String path, final String folderPath, final TailHandler handler)
-            throws IOException {
-        if (tailer == null) {
-            RandomAccessFile file = new RandomAccessFile(path, "r");
-            Path folder = Paths.get(folderPath);
-            tailer = new SrceTailer(file, file.length(), folder, handler);
-            Thread thread = new Thread(tailer);
-            thread.setDaemon(true);
-            thread.start();
-        }else{
-            RandomAccessFile file = new RandomAccessFile(path, "r");
-            Path folder = Paths.get(folderPath);
-            tailer.file = file;
-            tailer.length = file.length();
-            tailer.folder = folder;
-            tailer.handler = handler;
-            tailer.tail = new StringBuilder();
-        }
-        return tailer;
+    public static SrceTailer createTailer(final String path, final String folderPath, final TailHandler handler,
+            String uid, AtmosphereResource resource) throws IOException {
+        RandomAccessFile file = new RandomAccessFile(path, "r");
+        Path folder = Paths.get(folderPath);
+        return new SrceTailer(file, file.length(), folder, handler, uid, resource);
+    }
+
+    public void startTailerThread() {
+        Thread thread = new Thread(this);
+        thread.setDaemon(true);
+        thread.start();
     }
 
     @Override
@@ -66,7 +66,7 @@ public class SrceTailer implements Tailer, Runnable {
             folder.register(service, StandardWatchEventKinds.ENTRY_MODIFY);
 
             WatchKey key = null;
-            while (handler.isRun()) {
+            while (isRun()) {
                 key = service.take();
 
                 Kind<?> kind = null;
@@ -85,20 +85,34 @@ public class SrceTailer implements Tailer, Runnable {
         }
 
     }
-    
+
     @Override
     public void refreshTail() throws IOException {
         file.seek(length);
         for (long i = 0; i < file.length() - length; i++) {
             tail.append((char) file.readByte());
         }
-        sendToHandler(tail.toString());
+        sendToHandler(tail.toString(), uid, resource);
         tail.setLength(0);
         length = file.length();
     }
 
-    public void sendToHandler(String line) {
-        handler.handle(line);
+    public void sendToHandler(String line, String uid, final AtmosphereResource resource) throws IOException {
+        handler.handle(line, uid, resource);
+    }
+
+    public boolean isRun() {
+        return this.run;
+    }
+
+    public void startTail() {
+        LOG.info("Starting tailer...");
+        this.run = true;
+    }
+
+    public void stopTail() {
+        LOG.info("Stopping tailer...");
+        this.run = false;
     }
 
     public StringBuilder getTail() {
@@ -132,6 +146,5 @@ public class SrceTailer implements Tailer, Runnable {
     public void setFolder(Path folder) {
         this.folder = folder;
     }
-    
-    
+
 }
