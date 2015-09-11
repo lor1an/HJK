@@ -23,4 +23,5 @@
     </beans:bean>
 
     <resources mapping="/resources/**" location="/resources/" />
+    <resources mapping="/log/resources/**" location="/resources/" />
 </beans:beans>

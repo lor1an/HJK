@@ -22,6 +22,10 @@
 	<div id="tail" class="monospace selection"></div>
 	<input id="refresh" value="Refresh" type="button">
 	<button class="start_stop flag">Pause</button>
-
+<!-- 	<button class="prev">Prev 200</button> -->
+	<button class="download">Download</button>
+	<button class="gist">Upload all to gist</button>
+	<button class="gistSel">Upload selected to gist</button>
+	<iframe id="downloadFrame" style="display:none"></iframe>
 </body>
 </html>

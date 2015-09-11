@@ -1,11 +1,14 @@
 package com.hjk.service.impl;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -20,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.FileCopyUtils;
 
 import com.google.common.base.Splitter;
 import com.hjk.service.TailService;
@@ -31,7 +35,7 @@ public class TailServiceImpl implements TailService, TailHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(TailServiceImpl.class);
 
-    //@Value("#{environment.HYBRIS_HOME}\\log\\tomcat\\")
+    @Value("#{environment.HYBRIS_HOME}\\log\\tomcat\\")
     private String directory;
     private static final  Integer MAX_CHUNK_LENTH = 1500;
     private static final long DELAY = 100;
@@ -40,7 +44,7 @@ public class TailServiceImpl implements TailService, TailHandler {
 
     @Override
     public void getLogEntries(AtmosphereResource resource, String uid) throws IOException {
-        directory = System.getProperty("catalina.base").replace("bin\\platform\\tomcat", "log\\tomcat\\");
+        //directory = System.getProperty("catalina.base").replace("bin\\platform\\tomcat", "log\\tomcat\\");
         reInit();
         if(uidTailer.get(uid) != null){
             uidTailer.get(uid).stopTail();
@@ -127,4 +131,36 @@ public class TailServiceImpl implements TailService, TailHandler {
             uidTailer.put(uid, null);
         }
     }
+
+    @Override
+    public String getPreviousLines(int count, String uid) throws IOException {
+        if (uidTailer.get(uid) != null) {
+            String lines = uidTailer.get(uid).getPreviousLines(count);
+            System.out.println(lines);
+            return lines;
+        }
+        return null;
+    }
+    
+    @Override
+    public void downloadLog(HttpServletRequest request, HttpServletResponse response, String uid) throws IOException {
+        if (uidTailer.get(uid) != null) {
+            String path = uidTailer.get(uid).getFilePath();
+            FileInputStream inputStream = new FileInputStream(path);
+          
+            response.setContentType("application/zip");
+            String headerKey = "Content-Disposition";
+            String filename = path.substring(path.lastIndexOf("\\") + 1);
+            String headerValue = String.format("attachment; filename=\"%s\"", filename.replaceAll(".log", ".zip"));
+            response.setHeader(headerKey, headerValue);
+            
+            ZipOutputStream zos = new ZipOutputStream(response.getOutputStream());
+            ZipEntry ze = new ZipEntry(filename);
+            zos.putNextEntry(ze);
+            FileCopyUtils.copy(inputStream, zos);
+            inputStream.close();
+            zos.close();
+        }
+    }
+
 }

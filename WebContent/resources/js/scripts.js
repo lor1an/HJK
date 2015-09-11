@@ -6,6 +6,7 @@ $(document).ready(
           var lines = 0, notice = $("#info"), buffer = $('#tail');
           var pause = false;
           var pause_buffer = '';
+          var filename;
 
           function subscribe() {
             function callback(response) {
@@ -22,7 +23,8 @@ $(document).ready(
                 if (response.status == 200) {
                   var data = jQuery.parseJSON(response.responseBody);
                   if (data.filename) {
-                    notice.html('watching ' + data.filename);
+                    filename = data.filename;
+                    notice.html('watching ' + filename);
                   } else if (data.logs) {
                     var selector = $("#selector select");
                     $.each(data.logs, function() {
@@ -39,7 +41,7 @@ $(document).ready(
                         return;
                       }
                       connectedEndpoint.push(document.location.toString()
-                              + 'logviewer', null, $.atmosphere.request = {
+                              + 'viewer', null, $.atmosphere.request = {
                         data: 'log=' + log.options[log.selectedIndex].value
                       });
                     });
@@ -57,9 +59,8 @@ $(document).ready(
               }
             }
 
-            var location = document.location.toString() + '/logviewer';
-            var id = location.match(/\d{6}/);
-            location = location.replace(id, "/" + id);
+            var location = document.location.toString() + '/viewer';
+            location = location.replace('log', "/" + 'log');
             $.atmosphere.subscribe(location, !callbackAdded ? callback : null,
                     $.atmosphere.request = {
                       transport: "websocket",
@@ -94,6 +95,57 @@ $(document).ready(
               $this.text('Resume');
             }
           });
+          
+          $('.prev').click(function() {
+            var location = document.location.toString() + '/prev';
+            $.get(location);
+          });
+          
+          $('.download').click(function() {
+            var location = document.location.toString() + '/download';
+            var iframe = document.getElementById("downloadFrame");
+            iframe.src = location;
+          });
+          
+          $('.gist').click(function() {
+            var gistFileName = filename + '_gist.log';
+            var text = buffer.html().replace(/<br>/g, '\n');
+            text = text.replace(/<br>/g, '\n');
+            var toGist = {
+                    "description": "the description for this gist",
+                    "public": true,
+                    "files": {
+                      'console.log': {
+                        "content": text
+                      }
+                    }
+                  }
+            $.post('https://api.github.com/gists', JSON.stringify(toGist), function(data) {
+              window.prompt("",data.html_url);
+            });
+          });
+          
+          $('.gistSel').click(function() {
+            var gistFileName = filename + '_gist.log';
+            var text = window.getSelection().toString();
+            if(text.length == 0){
+              alert('Nothing selected');
+            }
+            var toGist = {
+                    "description": "the description for this gist",
+                    "public": true,
+                    "files": {
+                      'console.log': {
+                        "content": text
+                      }
+                    }
+                  }
+            $.post('https://api.github.com/gists', JSON.stringify(toGist), function(data) {
+              window.prompt("",data.html_url);
+            });
+          });
+          
+     
 
           connect();
         });
@@ -106,8 +158,6 @@ $(function() {
 
 $(window).unload( function () { 
   var location = document.location.toString() + '/close';
-  var id = location.match(/\d{6}/);
-  location = location.replace(id, "/" + id);
   jQuery.ajax({url:location, async:false})
 } );
 
